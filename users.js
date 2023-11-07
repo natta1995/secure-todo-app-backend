@@ -1,10 +1,10 @@
 // routes/users.js
-
+const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
-const db = require('./db'); 
-const { generateJWT,  generatePasswordResetToken } = require('./auth'); 
-const  sendPasswordResetEmail  = require('./email.js');
+const db = require('./db');
+const { generateJWT } = require('./auth');
+const sendPasswordResetEmail = require('./email.js');
 const bcrypt = require('bcrypt');
 
 // Funktion för att hasha ett lösenord
@@ -87,10 +87,10 @@ router.get('/:id', (req, res) => {
 
 // API-endpunkt för användarregistrering
 router.post('/register', (req, res) => {
-    const { email, username, password } = req.body;
+  const { email, username, password } = req.body;
 
 
-    // Validera lösenordet
+  // Validera lösenordet
   if (
     password.length < 12 ||
     !/[a-z]/.test(password) ||     // Innehåller minst en liten bokstav
@@ -103,16 +103,16 @@ router.post('/register', (req, res) => {
   }
 
   const role = 'user'; // Definiera standardrollen
-    // Lägg till användaren i databasen
-    const query = 'INSERT INTO Users (email, username, password, role) VALUES (?, ?, ?, ?)';
-    db.query(query, [email, username, password, role], (err, result) => {
-      if (err) {
-        res.status(500).json({ error: 'Kunde inte registrera användaren' });
-      } else {
-        res.json({ message: 'Användaren har registrerats' });
-      }
-    });
+  // Lägg till användaren i databasen
+  const query = 'INSERT INTO Users (email, username, password, role) VALUES (?, ?, ?, ?)';
+  db.query(query, [email, username, password, role], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: 'Kunde inte registrera användaren' });
+    } else {
+      res.json({ message: 'Användaren har registrerats' });
+    }
   });
+});
 
 
 router.post('/login', (req, res) => {
@@ -142,58 +142,55 @@ router.post('/login', (req, res) => {
 });
 
 
+
+
 // Begär lösenordsåterställning
 router.post('/reset-password-request', (req, res) => {
   const { email } = req.body;
   console.log("reset password endpoint")
   // Generera och spara återställningstoken i databasen
-  const resetToken = generatePasswordResetToken();
+  //const resetToken = generatePasswordResetToken();
+  const resetToken = generateJWT(email)
   //const resetTokenExpiration = Date.now() + 3600000; // Token gäller i 1 timme
-  db.query('UPDATE users SET reset_token = ? WHERE email = ?', [resetToken, email], (error) => {
-    if (error) {
-      console.log(error)
-      return res.status(500).json({ message: 'Database error' });
-    }
 
-    // Skicka e-postmeddelande med återställningslänk inklusive resetToken
-    sendPasswordResetEmail(email, resetToken); // Använd sendPasswordResetEmail-funktionen
+  // Skicka e-postmeddelande med återställningslänk inklusive resetToken
+  sendPasswordResetEmail(email, resetToken); // Använd sendPasswordResetEmail-funktionen
 
-    res.json({ message: 'Ett e-postmeddelande med en återställningslänk har skickats.' });
-  });
+  res.json({ message: 'Ett e-postmeddelande med en återställningslänk har skickats.' });;
 });
+
 
 // Återställ lösenord
 router.post('/reset-password', (req, res) => {
-  const { email, token, newPassword } = req.body;
+  const { newPassword } = req.body;
+  const token = req.headers["x-access-token"]
+  if (!token) {
+    return res.status(403).send({
+      message: "no token provided",
+    });
+  }
 
-  // Hämta återställningstoken och tokenets giltighetstid från databasen
-  db.query('SELECT reset_token, reset_token_expiration FROM users WHERE email = ?', [email], (error, results) => {
-    if (error) {
-      return res.status(500).json({ message: 'Database error' });
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({
+        message: "Unauthorized",
+      });
     }
-
-    const savedToken = results[0].reset_token;
-    const tokenExpiration = results[0].reset_token_expiration;
-
-    // Kontrollera att tokenet är giltigt
-    if (!savedToken || savedToken !== token || Date.now() > tokenExpiration) {
-      return res.status(400).json({ message: 'Ogiltigt eller utgånget token.' });
-    }
-
-    // Kryptera det nya lösenordet (om du inte redan gör det)
+    const email = decoded.email
+    console.log(email)
     const hashedPassword = hashPassword(newPassword); // Implementera hashPassword-funktionen
 
     // Uppdatera användarens lösenord och ta bort återställningstoken
-    db.query('UPDATE users SET password = ?, reset_token = NULL, reset_token_expiration = NULL WHERE email = ?', [hashedPassword, email], (error) => {
+    db.query('UPDATE users SET password = ?, reset_token = NULL WHERE email = ?', [hashedPassword, email], (error) => {
       if (error) {
         return res.status(500).json({ message: 'Database error' });
       }
 
       res.json({ message: 'Lösenordet har återställts.' });
     });
-  });
+  })
+
+
 });
-
-
 
 module.exports = router;
