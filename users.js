@@ -115,26 +115,39 @@ router.post('/register', (req, res) => {
 });
 
 
+
+
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  // Kontrollera användaruppgifter mot databasen
-  const query = 'SELECT * FROM Users WHERE email = ? AND password = ?';
-  db.query(query, [email, password], (err, results) => {
+  // Hämta användaruppgifter från databasen baserat på e-postadressen
+  const query = 'SELECT * FROM Users WHERE email = ?';
+
+  db.query(query, [email], (err, results) => {
     if (err) {
       res.status(500).json({ error: 'Ett fel uppstod vid inloggning' });
     } else {
       if (results.length > 0) {
-        // Användaren hittades, logga in
-        const token = generateJWT(email); // Skapa JWT
-
-        // Hämta användaruppgifter från resultatet
+        // Användaren hittades i databasen
         const userData = results[0];
 
-        // Skicka JWT och användaruppgifter som svar
-        res.json({ token, user: userData });
+        // Jämför det hashade lösenordet i databasen med det angivna lösenordet
+        bcrypt.compare(password, userData.password, (bcryptErr, isMatch) => {
+          if (bcryptErr) {
+            res.status(500).json({ error: 'Ett fel uppstod vid inloggning' });
+          } else if (isMatch) {
+            // Lösenordet är korrekt, logga in användaren
+            const token = generateJWT(email); // Skapa JWT
+
+            // Skicka JWT och användaruppgifter som svar
+            res.json({ token, user: userData });
+          } else {
+            // Inloggningen misslyckades
+            res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
+          }
+        });
       } else {
-        // Inloggningen misslyckades
+        // Användaren hittades inte i databasen
         res.status(401).json({ error: 'Ogiltiga inloggningsuppgifter' });
       }
     }
@@ -144,26 +157,28 @@ router.post('/login', (req, res) => {
 
 
 
+router.post('/invate-friend-request', (req, res) => {
+  const { email } = req.body;
+})
+
+
+
 // Begär lösenordsåterställning
 router.post('/reset-password-request', (req, res) => {
   const { email } = req.body;
-  console.log("reset password endpoint")
-  // Generera och spara återställningstoken i databasen
-  //const resetToken = generatePasswordResetToken();
-  const resetToken = generateJWT(email)
-  //const resetTokenExpiration = Date.now() + 3600000; // Token gäller i 1 timme
 
-  // Skicka e-postmeddelande med återställningslänk inklusive resetToken
-  sendPasswordResetEmail(email, resetToken); // Använd sendPasswordResetEmail-funktionen
+  const resetToken = generateJWT(email)
+  
+  sendPasswordResetEmail(email, resetToken); 
 
   res.json({ message: 'Ett e-postmeddelande med en återställningslänk har skickats.' });;
 });
 
 
 // Återställ lösenord
-router.post('/reset-password', (req, res) => {
+router.put('/reset-password', (req, res) => {
   const { newPassword } = req.body;
-  const token = req.headers["x-access-token"]
+  const token = req.headers["x-access-token"];
   if (!token) {
     return res.status(403).send({
       message: "no token provided",
@@ -176,21 +191,25 @@ router.post('/reset-password', (req, res) => {
         message: "Unauthorized",
       });
     }
-    const email = decoded.email
-    console.log(email)
-    const hashedPassword = hashPassword(newPassword); // Implementera hashPassword-funktionen
+    const email = decoded.email;
+    console.log(email);
 
-    // Uppdatera användarens lösenord och ta bort återställningstoken
-    db.query('UPDATE users SET password = ?, reset_token = NULL WHERE email = ?', [hashedPassword, email], (error) => {
+    // Hasha det nya lösenordet
+    const hashedPassword = hashPassword(newPassword); // Implementera hashPassword-funktionen
+    console.log("Nytt lösenord:", newPassword); // Logga det nya lösenordet
+    console.log("Hashat lösenord:", hashedPassword); // Logga det hashade lösenordet
+
+    // Uppdatera användarens lösenord i databasen
+    db.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email], (error) => {
       if (error) {
         return res.status(500).json({ message: 'Database error' });
       }
 
-      res.json({ message: 'Lösenordet har återställts.' });
+      res.json({ message: 'Lösenordet har ändrats.' });
     });
-  })
-
-
+  });
 });
+
+
 
 module.exports = router;
