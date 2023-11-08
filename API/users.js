@@ -2,10 +2,11 @@
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
-const db = require('./db');
-const { generateJWT } = require('./auth');
-const sendPasswordResetEmail = require('./email.js');
+const db = require('../db.js');
+const { generateJWT } = require('../auth.js');
+const {sendPasswordResetEmail, sendInvitationEmail }= require('../email.js');
 const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 // Funktion för att hasha ett lösenord
 function hashPassword(password) {
@@ -83,33 +84,41 @@ router.get('/:id', (req, res) => {
     res.status(404).json({ message: 'Användaren hittades inte' });
   }
 });
-// todo create invare endpoint
+
+
 
 // API-endpunkt för användarregistrering
 router.post('/register', (req, res) => {
   const { email, username, password } = req.body;
-
 
   // Validera lösenordet
   if (
     password.length < 12 ||
     !/[a-z]/.test(password) ||     // Innehåller minst en liten bokstav
     !/[A-Z]/.test(password) ||     // Innehåller minst en stor bokstav
-    !/[0-9]/.test(password) ||        // Innehåller siffror
-    !/[^a-zA-Z0-9]/.test(password)    // Innehåller specialtecken
+    !/[0-9]/.test(password) ||     // Innehåller siffror
+    !/[^a-zA-Z0-9]/.test(password)  // Innehåller specialtecken
   ) {
     res.status(400).json({ error: 'Ogiltigt lösenord' });
     return;
   }
 
-  const role = 'user'; // Definiera standardrollen
-  // Lägg till användaren i databasen
-  const query = 'INSERT INTO Users (email, username, password, role) VALUES (?, ?, ?, ?)';
-  db.query(query, [email, username, password, role], (err, result) => {
+  const role = USER_ROLL; 
+
+  // Hasha lösenordet med bcrypt
+  bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte registrera användaren' });
     } else {
-      res.json({ message: 'Användaren har registrerats' });
+      // Lägg till användaren i databasen med hashedPassword
+      const query = 'INSERT INTO Users (email, username, password, role) VALUES (?, ?, ?, ?)';
+      db.query(query, [email, username, hashedPassword, role], (err, result) => {
+        if (err) {
+          res.status(500).json({ error: 'Kunde inte registrera användaren' });
+        } else {
+          res.json({ message: 'Användaren har registrerats' });
+        }
+      });
     }
   });
 });
@@ -159,7 +168,51 @@ router.post('/login', (req, res) => {
 
 router.post('/invate-friend-request', (req, res) => {
   const { email } = req.body;
+
+  const resetToken = generateJWT(email)
+
+  sendInvitationEmail(email, resetToken);
+
+  res.json({ message: 'En e-postinbjudan har skickats' })
 })
+
+
+router.post('/invate-friend', (req, res) => {
+  const { email, username, password } = req.body;
+
+  // Validera lösenordet
+  if (
+    password.length < 12 ||
+    !/[a-z]/.test(password) ||     // Innehåller minst en liten bokstav
+    !/[A-Z]/.test(password) ||     // Innehåller minst en stor bokstav
+    !/[0-9]/.test(password) ||     // Innehåller siffror
+    !/[^a-zA-Z0-9]/.test(password)  // Innehåller specialtecken
+  ) {
+    res.status(400).json({ error: 'Ogiltigt lösenord' });
+    return;
+  }
+
+  const role = 'user'; // Definiera standardrollen
+
+  // Hasha lösenordet med bcrypt
+  bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
+    if (err) {
+      res.status(500).json({ error: 'Kunde inte registrera användaren' });
+    } else {
+      // Lägg till användaren i databasen med hashedPassword
+      const query = 'INSERT INTO Users (email, username, password, role) VALUES (?, ?, ?, ?)';
+      db.query(query, [email, username, hashedPassword, role], (err, result) => {
+        if (err) {
+          res.status(500).json({ error: 'Kunde inte registrera användaren' });
+        } else {
+          res.json({ message: 'Användaren har registrerats' });
+        }
+      });
+    }
+  });
+});
+
+
 
 
 
@@ -168,8 +221,8 @@ router.post('/reset-password-request', (req, res) => {
   const { email } = req.body;
 
   const resetToken = generateJWT(email)
-  
-  sendPasswordResetEmail(email, resetToken); 
+
+  sendPasswordResetEmail(email, resetToken);
 
   res.json({ message: 'Ett e-postmeddelande med en återställningslänk har skickats.' });;
 });

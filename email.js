@@ -33,5 +33,28 @@ function sendPasswordResetEmail(email, resetToken) {
   });
 }
 
-module.exports = sendPasswordResetEmail;
+function sendInvitationEmail(email, resetToken) {
+  const transporter = createTransporter();
+
+  const mailOptions = {
+    from: process.env.MY_EMAIL,
+    to: email,
+    subject: 'Inbjudan till TODO app',
+    text: `Klicka på länken för att registrera dig: http://localhost:3000/registeruser/?resetToken=${resetToken}`
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log('Fel vid sändning av e-post:', error);
+    } else {
+      console.log('E-post skickad:', info.response);
+    }
+  });
+}
+
+
+module.exports = {
+  sendPasswordResetEmail,
+  sendInvitationEmail
+}
 
