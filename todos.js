@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./db');
+const verifyToken = require('./authMiddleware');
 
-//const verifyToken = require('./authMiddleware');
 
 // API-endpunkt för att hämta alla "todos"
-router.get('/', (req, res) => {
+router.get('/', verifyToken, (req, res) => {
   const query = 'SELECT * FROM Todos'; 
   db.query(query, (err, results) => {
     if (err) {
@@ -17,7 +17,7 @@ router.get('/', (req, res) => {
 });
 
 // API-endpunkt för att skapa en ny "todo"
-router.post('/',  (req, res) => {
+router.post('/',  verifyToken, (req, res) => {
     const { description } = req.body;
 
     const query = 'INSERT INTO todos (description) VALUES (?)';
@@ -32,7 +32,7 @@ router.post('/',  (req, res) => {
   });
 
 // API-endpunkt för att uppdatera en "todo" med ett specifikt ID
-router.put('/:id', (req, res) => {
+router.put('/:id', verifyToken, (req, res) => {
     const todoId = req.params.id;
     const { description } = req.body; 
     const query = 'UPDATE todos SET description = ? WHERE id = ?';
@@ -46,7 +46,7 @@ router.put('/:id', (req, res) => {
   });
   
 //API-endpoint för att ta bort en todo
-router.delete('/:id', (req, res) => {
+router.delete('/:id', verifyToken, (req, res) => {
     const todoId = req.params.id;
     const query = 'DELETE FROM todos WHERE id = ?';
     db.query(query, [todoId], (err, result) => {
