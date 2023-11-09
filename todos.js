@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const db = require('./db');
+
+//const verifyToken = require('./authMiddleware');
 
 // API-endpunkt för att hämta alla "todos"
 router.get('/', (req, res) => {
@@ -15,7 +17,7 @@ router.get('/', (req, res) => {
 });
 
 // API-endpunkt för att skapa en ny "todo"
-router.post('/', (req, res) => {
+router.post('/',  (req, res) => {
     const { description } = req.body;
 
     const query = 'INSERT INTO todos (description) VALUES (?)';

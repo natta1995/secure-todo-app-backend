@@ -2,11 +2,14 @@
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
-const db = require('../db.js');
-const { generateJWT } = require('../auth.js');
-const {sendPasswordResetEmail, sendInvitationEmail }= require('../email.js');
+const db = require('./db.js');
+const { generateJWT } = require('./auth.js');
+const {sendPasswordResetEmail, sendInvitationEmail }= require('./email.js');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+//const { verifyToken } = require('./authMiddleware');
+const verifyToken = require('./authMiddleware');
+
 
 // Funktion för att hasha ett lösenord
 function hashPassword(password) {
@@ -20,7 +23,7 @@ const hashedPassword = hashPassword(newPassword);
 console.log(hashedPassword); // Det hashade lösenordet
 
 // API-endpunkt för att hämta användare
-router.get('/', (req, res) => {
+router.get('/', verifyToken,  (req, res) => {
   db.query('SELECT * FROM Users', (err, results) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte hämta användare' });
@@ -30,7 +33,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.get('/users', (req, res) => {
+router.get('/users', verifyToken, (req, res) => {
   // Gör en databasfråga för att hämta alla användare med deras roller
   db.query('SELECT id, username, role FROM Users', (err, results) => {
     if (err) {
@@ -42,7 +45,7 @@ router.get('/users', (req, res) => {
 });
 
 // API-endpunkt för att ändra användarroll
-router.put('/change-role/:id', (req, res) => {
+router.put('/change-role/:id', verifyToken, (req, res) => {
   const userId = req.params.id;
   const newRole = req.body.role; // Skicka den nya rollen i förfråganens kropp
 
@@ -57,7 +60,7 @@ router.put('/change-role/:id', (req, res) => {
 });
 
 // API-endpunkt för att ta bort en användare
-router.delete('/:id', (req, res) => {
+router.delete('/:id', verifyToken, (req, res) => {
   const userId = req.params.id;
 
   // Utför borttagningen från databasen baserat på userId
@@ -71,7 +74,7 @@ router.delete('/:id', (req, res) => {
 });
 
 
-router.get('/:id', (req, res) => {
+router.get('/:id',verifyToken, (req, res) => {
   const user = req.user; // Antag att användarinformationen finns i req.user efter att ha verifierat JWT-token
 
   if (user) {
@@ -103,7 +106,7 @@ router.post('/register', (req, res) => {
     return;
   }
 
-  const role = USER_ROLL; 
+  const role = process.env.USER_ROLL; 
 
   // Hasha lösenordet med bcrypt
   bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
@@ -166,7 +169,7 @@ router.post('/login', (req, res) => {
 
 
 
-router.post('/invate-friend-request', (req, res) => {
+router.post('/invate-friend-request', verifyToken, (req, res) => {
   const { email } = req.body;
 
   const resetToken = generateJWT(email)
@@ -177,7 +180,7 @@ router.post('/invate-friend-request', (req, res) => {
 })
 
 
-router.post('/invate-friend', (req, res) => {
+router.post('/invate-friend', verifyToken, (req, res) => {
   const { email, username, password } = req.body;
 
   // Validera lösenordet
@@ -192,7 +195,7 @@ router.post('/invate-friend', (req, res) => {
     return;
   }
 
-  const role = 'user'; // Definiera standardrollen
+  const role = process.env.USER_ROLL;
 
   // Hasha lösenordet med bcrypt
   bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
@@ -214,10 +217,8 @@ router.post('/invate-friend', (req, res) => {
 
 
 
-
-
 // Begär lösenordsåterställning
-router.post('/reset-password-request', (req, res) => {
+router.post('/reset-password-request', verifyToken, (req, res) => {
   const { email } = req.body;
 
   const resetToken = generateJWT(email)
@@ -229,7 +230,7 @@ router.post('/reset-password-request', (req, res) => {
 
 
 // Återställ lösenord
-router.put('/reset-password', (req, res) => {
+router.put('/reset-password', verifyToken, (req, res) => {
   const { newPassword } = req.body;
   const token = req.headers["x-access-token"];
   if (!token) {
