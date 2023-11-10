@@ -168,7 +168,21 @@ router.post('/login', (req, res) => {
   });
 });
 
+// Logout route
+router.post('/logout', verifyToken, (req, res) => {
+  const token = req.headers['authorization'].split(' ')[1]; // Extraherar token från authorization header
 
+  // Lägg till token i token_blacklist-tabellen
+  const query = 'INSERT INTO token_blacklist (token, user_id) VALUES (?, ?)';
+  db.query(query, [token, req.user.id], (err, result) => {
+    if (err) {
+      console.error("Databasfel vid logout: ", err);
+      return res.status(500).json({ error: 'Internt serverfel' });
+    }
+
+    res.json({ message: 'Utloggad och token svartlistad' });
+  });
+})
 
 
 router.post('/invate-friend-request', verifyToken, checkAdminRole,  (req, res) => {
