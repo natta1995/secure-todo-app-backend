@@ -11,8 +11,8 @@ function generatePasswordResetToken() {
 }
 
 // Skapa JWT-token för användaren
-function generateJWT(email) {
-  const token = jwt.sign({ email }, process.env.SECRET_KEY, { expiresIn: '2h' });
+function generateJWT(email, role) {
+  const token = jwt.sign({ email, role }, process.env.SECRET_KEY, { expiresIn: '2h' });
   return token;
 }
 

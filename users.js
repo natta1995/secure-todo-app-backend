@@ -7,8 +7,8 @@ const { generateJWT } = require('./auth.js');
 const {sendPasswordResetEmail, sendInvitationEmail }= require('./email.js');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-//const { verifyToken } = require('./authMiddleware');
 const verifyToken = require('./authMiddleware');
+const checkAdminRole = require('./rollMiddleware')
 
 
 // Funktion för att hasha ett lösenord
@@ -33,7 +33,7 @@ router.get('/', verifyToken,  (req, res) => {
   });
 });
 
-router.get('/users', verifyToken, (req, res) => {
+router.get('/users', verifyToken, checkAdminRole, (req, res) => {
   // Gör en databasfråga för att hämta alla användare med deras roller
   db.query('SELECT id, username, role FROM Users', (err, results) => {
     if (err) {
@@ -60,7 +60,8 @@ router.put('/change-role/:id', verifyToken, (req, res) => {
 });
 
 // API-endpunkt för att ta bort en användare
-router.delete('/:id', verifyToken, (req, res) => {
+router.delete('/:id', verifyToken, checkAdminRole,(req, res) => {
+  console.log("User in API route:", req.user);
   const userId = req.params.id;
 
   // Utför borttagningen från databasen baserat på userId
@@ -72,6 +73,7 @@ router.delete('/:id', verifyToken, (req, res) => {
     }
   });
 });
+
 
 
 router.get('/:id',verifyToken, (req, res) => {
@@ -149,7 +151,7 @@ router.post('/login', (req, res) => {
             res.status(500).json({ error: 'Ett fel uppstod vid inloggning' });
           } else if (isMatch) {
             // Lösenordet är korrekt, logga in användaren
-            const token = generateJWT(email); // Skapa JWT
+            const token = generateJWT(email, userData.role); // Skapa JWT
 
             // Skicka JWT och användaruppgifter som svar
             res.json({ token, user: userData });
@@ -169,7 +171,7 @@ router.post('/login', (req, res) => {
 
 
 
-router.post('/invate-friend-request', verifyToken, (req, res) => {
+router.post('/invate-friend-request', verifyToken, checkAdminRole,  (req, res) => {
   const { email } = req.body;
 
   const resetToken = generateJWT(email)
@@ -180,7 +182,7 @@ router.post('/invate-friend-request', verifyToken, (req, res) => {
 })
 
 
-router.post('/invate-friend', verifyToken, (req, res) => {
+router.post('/invate-friend', (req, res) => {
   const { email, username, password } = req.body;
 
   // Validera lösenordet
@@ -218,7 +220,7 @@ router.post('/invate-friend', verifyToken, (req, res) => {
 
 
 // Begär lösenordsåterställning
-router.post('/reset-password-request', verifyToken, (req, res) => {
+router.post('/reset-password-request',  (req, res) => {
   const { email } = req.body;
 
   const resetToken = generateJWT(email)
@@ -230,7 +232,7 @@ router.post('/reset-password-request', verifyToken, (req, res) => {
 
 
 // Återställ lösenord
-router.put('/reset-password', verifyToken, (req, res) => {
+router.put('/reset-password', (req, res) => {
   const { newPassword } = req.body;
   const token = req.headers["x-access-token"];
   if (!token) {

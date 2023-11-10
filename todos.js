@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('./db');
 const verifyToken = require('./authMiddleware');
+const checkAdminRole = require('./rollMiddleware')
 
 
 // API-endpunkt för att hämta alla "todos"
@@ -32,7 +33,7 @@ router.post('/',  verifyToken, (req, res) => {
   });
 
 // API-endpunkt för att uppdatera en "todo" med ett specifikt ID
-router.put('/:id', verifyToken, (req, res) => {
+router.put('/:id', verifyToken, checkAdminRole, (req, res) => {
     const todoId = req.params.id;
     const { description } = req.body; 
     const query = 'UPDATE todos SET description = ? WHERE id = ?';
