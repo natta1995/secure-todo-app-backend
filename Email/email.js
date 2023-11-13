@@ -1,9 +1,7 @@
-// email.js
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 //const fs = require('fs');
 
-// Skapa en transporter för att skicka e-post
 function createTransporter() {
   return nodemailer.createTransport({
     service: 'Gmail',

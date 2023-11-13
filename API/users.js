@@ -9,18 +9,19 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const verifyToken = require('../Middleware/authMiddleware.js');
 const checkAdminRole = require('../Middleware/rollMiddleware.js')
+const {checkCreaterRole, findUserById } = require('../Middleware/createrMiddleware.js')
 
 
 // Funktion för att hasha ett lösenord
 function hashPassword(password) {
-  const saltRounds = 10; // Antal hashningsrundor
+  const saltRounds = 10; // Antal hashningsrundor 
   return bcrypt.hashSync(password, saltRounds);
 }
 
 // Använda funktionen för att hasha ett lösenord
 const newPassword = 'nyttLosenord';
 const hashedPassword = hashPassword(newPassword);
-console.log(hashedPassword); // Det hashade lösenordet
+console.log(hashedPassword); // Det hashade lösenordet 
 
 // API-endpunkt för att hämta användare
 router.get('/', verifyToken,  (req, res) => {
@@ -34,7 +35,7 @@ router.get('/', verifyToken,  (req, res) => {
 });
 
 router.get('/users', verifyToken, checkAdminRole, (req, res) => {
-  // Gör en databasfråga för att hämta alla användare med deras roller
+// Gör en databasfråga för att hämta alla användare med deras roller
   db.query('SELECT id, username, role FROM Users', (err, results) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte hämta användare' });
@@ -45,11 +46,11 @@ router.get('/users', verifyToken, checkAdminRole, (req, res) => {
 });
 
 // API-endpunkt för att ändra användarroll
-router.put('/change-role/:id', verifyToken, (req, res) => {
+router.put('/change-role/:id', verifyToken, checkAdminRole, checkCreaterRole, (req, res) => {
   const userId = req.params.id;
-  const newRole = req.body.role; // Skicka den nya rollen i förfråganens kropp
+  const newRole = req.body.role; 
 
-  // Uppdatera användarrollen i databasen baserat på userId
+// Uppdatera användarrollen i databasen baserat på userId
   db.query('UPDATE Users SET role = ? WHERE id = ?', [newRole, userId], (err, result) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte uppdatera användarens roll' });
@@ -60,11 +61,11 @@ router.put('/change-role/:id', verifyToken, (req, res) => {
 });
 
 // API-endpunkt för att ta bort en användare
-router.delete('/:id', verifyToken, checkAdminRole,(req, res) => {
+router.delete('/:id', verifyToken, checkAdminRole, checkCreaterRole, (req, res) => {
   console.log("User in API route:", req.user);
   const userId = req.params.id;
 
-  // Utför borttagningen från databasen baserat på userId
+// Utför borttagningen från databasen baserat på userId
   db.query('DELETE FROM Users WHERE id = ?', userId, (err, result) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte ta bort användaren' });
@@ -77,10 +78,10 @@ router.delete('/:id', verifyToken, checkAdminRole,(req, res) => {
 
 
 router.get('/:id',verifyToken, (req, res) => {
-  const user = req.user; // Antag att användarinformationen finns i req.user efter att ha verifierat JWT-token
+  const user = req.user; // Antag att användarinformationen finns i req.user efter att ha verifierat JWT-token 
 
   if (user) {
-    // Returnera användarinformation som JSON
+// Returnera användarinformation som JSON
     res.json({
       username: user.username,
       role: user.role,
@@ -96,7 +97,7 @@ router.get('/:id',verifyToken, (req, res) => {
 router.post('/register', (req, res) => {
   const { email, username, password } = req.body;
 
-  // Validera lösenordet
+// Validera lösenordet
   if (
     password.length < 12 ||
     !/[a-z]/.test(password) ||     // Innehåller minst en liten bokstav
@@ -109,8 +110,8 @@ router.post('/register', (req, res) => {
   }
 
   const role = process.env.USER_ROLL; 
-
-  // Hasha lösenordet med bcrypt
+  
+// Hasha lösenordet med bcrypt
   bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
     if (err) {
       res.status(500).json({ error: 'Kunde inte registrera användaren' });

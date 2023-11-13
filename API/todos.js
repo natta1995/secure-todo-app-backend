@@ -18,7 +18,7 @@ router.get('/', verifyToken, (req, res) => {
 });
 
 // API-endpunkt för att skapa en ny "todo"
-router.post('/',  verifyToken, (req, res) => {
+router.post('/',  verifyToken, checkAdminRole, (req, res) => {
     const { description } = req.body;
 
     const query = 'INSERT INTO todos (description) VALUES (?)';
@@ -33,7 +33,7 @@ router.post('/',  verifyToken, (req, res) => {
   });
 
 // API-endpunkt för att uppdatera en "todo" med ett specifikt ID
-router.put('/:id', verifyToken, checkAdminRole, (req, res) => {
+/*router.put('/:id', verifyToken, checkAdminRole, (req, res) => {
     const todoId = req.params.id;
     const { description } = req.body; 
     const query = 'UPDATE todos SET description = ? WHERE id = ?';
@@ -44,7 +44,7 @@ router.put('/:id', verifyToken, checkAdminRole, (req, res) => {
         res.json({ message: 'Todo med ID ' + todoId + ' har uppdaterats' });
       }
     });
-  });
+  });*/
   
 //API-endpoint för att ta bort en todo
 router.delete('/:id', verifyToken, (req, res) => {
