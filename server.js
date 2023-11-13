@@ -8,10 +8,10 @@ app.use(express.json());
 
 app.use(cors());
 
-const usersRouter = require('./users');
+const usersRouter = require('./API/users');
 app.use('/api/users', usersRouter);
 
-const todosRouter = require('./todos'); 
+const todosRouter = require('./API/todos'); 
 app.use('/api/todos', todosRouter);
 
 app.listen(port, () => {

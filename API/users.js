@@ -2,13 +2,13 @@
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
-const db = require('./db.js');
-const { generateJWT } = require('./auth.js');
-const {sendPasswordResetEmail, sendInvitationEmail }= require('./email.js');
+const db = require('../db.js');
+const { generateJWT } = require('../auth.js');
+const {sendPasswordResetEmail, sendInvitationEmail }= require('../Email/email.js');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-const verifyToken = require('./authMiddleware');
-const checkAdminRole = require('./rollMiddleware')
+const verifyToken = require('../Middleware/authMiddleware.js');
+const checkAdminRole = require('../Middleware/rollMiddleware.js')
 
 
 // Funktion för att hasha ett lösenord

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('./db');
-const verifyToken = require('./authMiddleware');
-const checkAdminRole = require('./rollMiddleware')
+const db = require('../db');
+const verifyToken = require('../Middleware/authMiddleware');
+const checkAdminRole = require('../Middleware/rollMiddleware')
 
 
 // API-endpunkt för att hämta alla "todos"
